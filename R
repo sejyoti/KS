@@ -1,0 +1,30 @@
+$ library(readxl)
+library(matlabr)
+
+EMT76GS = function(finalGSEMat,gseID,outDir){
+
+  cat("Calculating EMT Score by using 76 gene signatures ....\n")
+
+  remIdx = which(apply(finalGSEMat,1,function(x) any(x == NaN | x == -Inf)) == TRUE)
+  if(length(remIdx) > 0 ) finalGSEMat = finalGSEMat[-remIdx, ]
+
+  finalGSEMat[is.na(finalGSEMat)] = 0
+
+  sampleNum = ncol(finalGSEMat)
+  genes = finalGSEMat[,1]
+  exp = apply(finalGSEMat[ ,3:sampleNum],2,as.numeric)
+
+  EMTSignature = data.frame(read_excel("../../Gene_signatures/76GS/EMT_signature_76GS.xlsx",col_names = TRUE))
+  EMTIdx = match(unique(na.omit(EMTSignature[,2])),genes)
+  geneFound = length(na.omit(EMTIdx))
+  cat(paste(geneFound ,"gene's expression values found \n",sep = " "))
+
+  EMTMat = exp[na.omit(EMTIdx),]
+  row.names(EMTMat) = genes[na.omit(EMTIdx)]
+
+  ## get the weights for each gene
+  ecadhExp = grep("^CDH1$",row.names(EMTMat))
+  if(length(ecadhExp) == 0 ){
+    cat("CDH1 gene not found- 76 GS EMT score cannot be calculated\n") 
+    EMTScoreStd = rep(0, ncol(exp))
+  } else{
